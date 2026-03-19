@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ru" data-lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAZE — Download Everything</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #060608;
+      --bg2: #0c0c12;
+      --surface: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.07);
+      --accent: #00f0ff;
+      --accent2: #ff2d78;
+      --accent3: #b44dff;
+      --text: #e8e8f0;
+      --muted: #5a5a72;
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── Custom Cursor ── */
+    #cursor {
+      position: fixed; top: 0; left: 0;
+      width: 10px; height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width .15s, height .15s, background .15s;
+      mix-blend-mode: difference;
+    }
+    #cursor-ring {
+      position: fixed; top: 0; left: 0;
+      width: 36px; height: 36px;
+      border: 1.5px solid var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: transform .08s ease, width .2s, height .2s, opacity .2s;
+      opacity: .5;
+    }
+    body:has(a:hover) #cursor, body:has(button:hover) #cursor { width: 18px; height: 18px; background: var(--accent2); }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      background-size: 180px;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: .4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 500;
+      padding: 20px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      backdrop-filter: blur(18px);
+      background: rgba(6,6,8,.7);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      letter-spacing: .12em;
+      color: #fff;
+      text-decoration: none;
+      position: relative;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-logo::after {
+      content: '';
+      position: absolute; bottom: -3px; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .35s ease;
+    }
+    .nav-logo:hover::after { transform: scaleX(1); }
+    .nav-right { display: flex; align-items: center; gap: 24px; }
+    .lang-toggle {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .lang-btn {
+      padding: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      letter-spacing: .1em;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+      text-transform: uppercase;
+    }
+    .lang-btn.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    .nav-tg {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 18px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-decoration: none;
+      transition: all .25s;
+    }
+    .nav-tg:hover { border-color: #2AABEE; color: #2AABEE; box-shadow: 0 0 18px rgba(42,171,238,.2); }
+    .tg-icon { width: 16px; height: 16px; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    .glow-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(0,240,255,.12), transparent 70%);
+      top: -100px; left: -150px;
+      animation: pulse1 8s ease-in-out infinite;
+    }
+    .glow-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,45,120,.1), transparent 70%);
+      bottom: 0; right: -100px;
+      animation: pulse2 10s ease-in-out infinite;
+    }
+    .glow-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(180,77,255,.08), transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      animation: pulse3 12s ease-in-out infinite;
+    }
+    @keyframes pulse1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(40px,30px) scale(1.1)} }
+    @keyframes pulse2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,-20px) scale(1.15)} }
+    @keyframes pulse3 { 0%,100%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.2)} }
+
+    /* diagonal grid lines */
+    .hero::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        repeating-linear-gradient(
+          -45deg,
+          transparent,
+          transparent 60px,
+          rgba(255,255,255,.012) 60px,
+          rgba(255,255,255,.012) 61px
+        );
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px;
+      border: 1px solid rgba(0,240,255,.3);
+      border-radius: 100px;
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      letter-spacing: .15em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeUp .8s ease both;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 2s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(6rem, 18vw, 16rem);
+      line-height: .9;
+      letter-spacing: .04em;
+      color: #fff;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp .9s .1s ease both;
+    }
+    .hero-title .slash { color: var(--accent); }
+
+    .hero-sub {
+      font-size: clamp(.9rem, 2vw, 1.15rem);
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-top: 20px;
+      animation: fadeUp 1s .2s ease both;
+    }
+
+    /* ── DOWNLOAD BOX ── */
+    .dl-box {
+      margin-top: 48px;
+      width: 100%;
+      max-width: 680px;
+      position: relative;
+      z-index: 10;
+      animation: fadeUp 1.1s .3s ease both;
+    }
+    .dl-input-wrap {
+      display: flex;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .dl-input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,240,255,.12), 0 0 40px rgba(0,240,255,.08);
+    }
+    .dl-input {
+      flex: 1;
+      padding: 18px 22px;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: .88rem;
+      outline: none;
+    }
+    .dl-input::placeholder { color: var(--muted); }
+    .dl-btn {
+      padding: 0 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      border: none;
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      letter-spacing: .1em;
+      cursor: pointer;
+      transition: filter .25s, transform .15s;
+      white-space: nowrap;
+    }
+    .dl-btn:hover { filter: brightness(1.15); }
+    .dl-btn:active { transform: scale(.97); }
+
+    .dl-formats {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .fmt-chip {
+      padding: 5px 14px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-family: var(--font-mono);
+      font-size: .68rem;
+      letter-spacing: .1em;
+      color: var(--muted);
+      transition: all .2s;
+      cursor: default;
+    }
+    .fmt-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── PLATFORMS ── */
+    .platforms {
+      padding: 80px 48px;
+      text-align: center;
+    }
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: .7rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+    .platform-grid {
+      display: flex; flex-wrap: wrap;
+      gap: 12px; justify-content: center;
+      max-width: 900px; margin: 0 auto;
+    }
+    .platform-pill {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: .9rem;
+      font-weight: 700;
+      transition: all .25s;
+    }
+    .platform-pill:hover {
+      border-color: var(--accent);
+      background: rgba(0,240,255,.05);
+      transform: translateY(-2px);
+    }
+    .p-icon { font-size: 1.2rem; }
+
+    /* ── HOW IT WORKS ── */
+    .hiw {
+      padding: 100px 48px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      letter-spacing: .05em;
+      line-height: 1;
+      margin-bottom: 60px;
+    }
+    .section-title .accent { color: var(--accent); }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+    }
+    .step {
+      padding: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .3s, transform .3s;
+    }
+    .step:hover { border-color: var(--accent); transform: translateY(-4px); }
+    .step::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .4s ease;
+    }
+    .step:hover::before { transform: scaleX(1); }
+    .step-num {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      color: rgba(255,255,255,.06);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .step-desc { font-size: .9rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── FEATURES ── */
+    .features {
+      padding: 100px 48px;
+      background: var(--bg2);
+      position: relative;
+      overflow: hidden;
+    }
+    .features-inner { max-width: 1100px; margin: 0 auto; }
+    .features::before {
+      content: 'RAZE';
+      position: absolute;
+      font-family: var(--font-display);
+      font-size: 30vw;
+      color: rgba(255,255,255,.012);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 60px;
+    }
+    .feat-card {
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,.02);
+      position: relative;
+      transition: all .3s;
+    }
+    .feat-card:hover {
+      background: rgba(0,240,255,.03);
+      border-color: rgba(0,240,255,.25);
+    }
+    .feat-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .feat-title { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .feat-desc { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 60px 48px;
+      border-top: 1px solid var(--border);
+      display: flex; flex-wrap: wrap;
+      align-items: center; justify-content: space-between;
+      gap: 24px;
+    }
+    .footer-logo {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      letter-spacing: .1em;
+      color: #fff;
+    }
+    .footer-logo span { color: var(--accent); }
+    .footer-links { display: flex; gap: 24px; align-items: center; }
+    .footer-link {
+      font-family: var(--font-mono);
+      font-size: .75rem;
+      letter-spacing: .08em;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color .2s;
+    }
+    .footer-link:hover { color: var(--accent); }
+    .footer-tg {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 20px;
+      border: 1px solid rgba(42,171,238,.3);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: .75rem;
+      color: #2AABEE;
+      text-decoration: none;
+      transition: all .25s;
+    }
+    .footer-tg:hover {
+      background: rgba(42,171,238,.08);
+      border-color: #2AABEE;
+      box-shadow: 0 0 20px rgba(42,171,238,.15);
+    }
+    .footer-copy {
+      width: 100%;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: .68rem;
+      color: var(--muted);
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      letter-spacing: .08em;
+    }
+    .footer-copy a { color: var(--accent); text-decoration: none; }
+
+    /* ── LOADING BAR ── */
+    #loading-bar {
+      position: fixed; top: 0; left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3), var(--accent2));
+      z-index: 9999;
+      width: 0;
+      transition: width .4s ease;
+      display: none;
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.85);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: #0e0e16;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      width: 90%; max-width: 480px;
+      transform: translateY(20px);
+      transition: transform .3s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .modal-url {
+      font-family: var(--font-mono);
+      font-size: .75rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+      word-break: break-all;
+    }
+    .format-choice {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-bottom: 28px;
+    }
+    .format-opt {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      cursor: pointer;
+      text-align: center;
+      transition: all .2s;
+    }
+    .format-opt:hover, .format-opt.selected {
+      border-color: var(--accent);
+      background: rgba(0,240,255,.06);
+    }
+    .format-opt .fo-icon { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+    .format-opt .fo-label { font-weight: 700; font-size: .95rem; }
+    .format-opt .fo-sub { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+    .quality-select {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: .82rem;
+      outline: none;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .quality-select:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 12px; }
+    .btn-cancel {
+      flex: 1; padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--font-body);
+      font-size: .9rem;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+    .btn-dl {
+      flex: 2; padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent3));
+      border: none; border-radius: 8px;
+      color: #000;
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      letter-spacing: .08em;
+      cursor: pointer;
+      transition: filter .2s;
+    }
+    .btn-dl:hover { filter: brightness(1.15); }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      margin-top: 20px;
+      display: none;
+    }
+    .progress-wrap.show { display: block; }
+    .progress-bar-bg {
+      height: 4px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      border-radius: 4px;
+      width: 0;
+      transition: width .4s ease;
+    }
+    .progress-label {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* ── animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      .hero-title { font-size: clamp(5rem, 25vw, 8rem); }
+      .platforms, .hiw, .features { padding: 60px 20px; }
+      footer { padding: 40px 20px; flex-direction: column; align-items: flex-start; }
+      .footer-links { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div id="loading-bar"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">RA<span>Z</span>E</a>
+  <div class="nav-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('ru')">RU</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+    </div>
+    <a href="https://t.me/RAZECRYSTAL" target="_blank" class="nav-tg">
+      <svg class="tg-icon" viewBox="0 0 24 24" fill="none">
+        <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z" fill="currentColor"/>
+      </svg>
+      <span data-ru="Разработчик" data-en="Developer">Разработчик</span>
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow glow-1"></div>
+  <div class="hero-glow glow-2"></div>
+  <div class="hero-glow glow-3"></div>
+
+  <div class="hero-badge">
+    <div class="badge-dot"></div>
+    <span data-ru="Скачивай всё. Бесплатно. Быстро." data-en="Download everything. Free. Fast.">Скачивай всё. Бесплатно. Быстро.</span>
+  </div>
+
+  <h1 class="hero-title">RA<span class="slash">Z</span>E</h1>
+
+  <p class="hero-sub" data-ru="Музыка, видео, shorts, reels — всё в одном месте. Вставь ссылку и скачивай в любом формате." data-en="Music, videos, shorts, reels — all in one place. Paste a link and download in any format.">
+    Музыка, видео, shorts, reels — всё в одном месте. Вставь ссылку и скачивай в любом формате.
+  </p>
+
+  <div class="dl-box">
+    <div class="dl-input-wrap">
+      <input class="dl-input" id="urlInput" type="text"
+        data-placeholder-ru="Вставь ссылку — YouTube, Spotify, TikTok, SoundCloud..."
+        data-placeholder-en="Paste link — YouTube, Spotify, TikTok, SoundCloud..."
+        placeholder="Вставь ссылку — YouTube, Spotify, TikTok, SoundCloud..."
+        onpaste="handlePaste(event)" />
+      <button class="dl-btn" onclick="openModal()" data-ru="СКАЧАТЬ" data-en="DOWNLOAD">СКАЧАТЬ</button>
+    </div>
+    <div class="dl-formats">
+      <span class="fmt-chip">MP3 320kbps</span>
+      <span class="fmt-chip">MP4 4K</span>
+      <span class="fmt-chip">FLAC</span>
+      <span class="fmt-chip">MP4 1080p</span>
+      <span class="fmt-chip">WEBM</span>
+      <span class="fmt-chip">MP4 720p</span>
+      <span class="fmt-chip">AAC</span>
+    </div>
+  </div>
+</section>
+
+<!-- PLATFORMS -->
+<section class="platforms">
+  <p class="section-label" data-ru="Поддерживаемые платформы" data-en="Supported platforms">Поддерживаемые платформы</p>
+  <div class="platform-grid">
+    <div class="platform-pill"><span class="p-icon">▶</span> YouTube</div>
+    <div class="platform-pill"><span class="p-icon">🎵</span> TikTok</div>
+    <div class="platform-pill"><span class="p-icon">📷</span> Instagram</div>
+    <div class="platform-pill"><span class="p-icon">🎧</span> SoundCloud</div>
+    <div class="platform-pill"><span class="p-icon">🐦</span> Twitter / X</div>
+    <div class="platform-pill"><span class="p-icon">🎬</span> Vimeo</div>
+    <div class="platform-pill"><span class="p-icon">📘</span> Facebook</div>
+    <div class="platform-pill"><span class="p-icon">🎶</span> Spotify*</div>
+    <div class="platform-pill"><span class="p-icon">🟣</span> Twitch</div>
+    <div class="platform-pill"><span class="p-icon">🎮</span> VK Video</div>
+    <div class="platform-pill"><span class="p-icon">🔊</span> Deezer*</div>
+    <div class="platform-pill"><span class="p-icon">📡</span> Dailymotion</div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="hiw" id="how">
+  <h2 class="section-title">
+    <span data-ru="КАК ЭТО" data-en="HOW IT">КАК ЭТО</span><br>
+    <span class="accent" data-ru="РАБОТАЕТ" data-en="WORKS">РАБОТАЕТ</span>
+  </h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title" data-ru="Скопируй ссылку" data-en="Copy the link">Скопируй ссылку</div>
+      <div class="step-desc" data-ru="Перейди на нужную платформу, найди трек или видео и скопируй ссылку из браузера или приложения." data-en="Go to any supported platform, find your track or video, and copy the link from the browser or app.">Перейди на нужную платформу, найди трек или видео и скопируй ссылку из браузера или приложения.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title" data-ru="Вставь на RAZE" data-en="Paste on RAZE">Вставь на RAZE</div>
+      <div class="step-desc" data-ru="Вставь скопированную ссылку в поле выше. Мы автоматически определим платформу и доступные форматы." data-en="Paste the link into the field above. We'll automatically detect the platform and available formats.">Вставь скопированную ссылку в поле выше. Мы автоматически определим платформу и доступные форматы.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title" data-ru="Выбери формат" data-en="Choose format">Выбери формат</div>
+      <div class="step-desc" data-ru="Выбери качество видео или аудио. MP3 до 320kbps, видео до 4K. Никаких регистраций и ограничений." data-en="Choose video or audio quality. MP3 up to 320kbps, video up to 4K. No sign-up, no limits.">Выбери качество видео или аудио. MP3 до 320kbps, видео до 4K. Никаких регистраций и ограничений.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title" data-ru="Скачай файл" data-en="Download the file">Скачай файл</div>
+      <div class="step-desc" data-ru="Нажми «Скачать» и файл начнёт загружаться мгновенно. Прямо в браузер, без лишнего ПО." data-en="Hit Download and the file starts immediately. Straight to your browser, no extra software needed.">Нажми «Скачать» и файл начнёт загружаться мгновенно. Прямо в браузер, без лишнего ПО.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-inner">
+    <h2 class="section-title">
+      <span data-ru="ПОЧЕМУ" data-en="WHY">ПОЧЕМУ</span><br>
+      <span class="accent">RAZE</span>
+    </h2>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <span class="feat-icon">⚡</span>
+        <div class="feat-title" data-ru="Молниеносная скорость" data-en="Lightning speed">Молниеносная скорость</div>
+        <div class="feat-desc" data-ru="Серверы оптимизированы для максимальной скорости конвертации и скачивания." data-en="Servers optimized for maximum conversion and download speed.">Серверы оптимизированы для максимальной скорости конвертации и скачивания.</div>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">🔒</span>
+        <div class="feat-title" data-ru="Без регистрации" data-en="No sign-up">Без регистрации</div>
+        <div class="feat-desc" data-ru="Никаких аккаунтов, email или личных данных. Просто ссылка — и всё." data-en="No accounts, emails or personal data needed. Just a link — that's it.">Никаких аккаунтов, email или личных данных. Просто ссылка — и всё.</div>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">🎚️</span>
+        <div class="feat-title" data-ru="Любое качество" data-en="Any quality">Любое качество</div>
+        <div class="feat-desc" data-ru="От лёгкого 360p до кристально чистого 4K и FLAC. Ты выбираешь." data-en="From lightweight 360p to crystal clear 4K and FLAC. You choose.">От лёгкого 360p до кристально чистого 4K и FLAC. Ты выбираешь.</div>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">📱</span>
+        <div class="feat-title" data-ru="Работает везде" data-en="Works everywhere">Работает везде</div>
+        <div class="feat-desc" data-ru="Телефон, планшет, ПК — любое устройство и любой браузер." data-en="Phone, tablet, PC — any device and any browser.">Телефон, планшет, ПК — любое устройство и любой браузер.</div>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">🌐</span>
+        <div class="feat-title" data-ru="1000+ платформ" data-en="1000+ platforms">1000+ платформ</div>
+        <div class="feat-desc" data-ru="Поддержка тысяч сайтов через yt-dlp. Если там есть медиа — RAZE скачает." data-en="Support for thousands of sites via yt-dlp. If there's media there — RAZE downloads it.">Поддержка тысяч сайтов через yt-dlp. Если там есть медиа — RAZE скачает.</div>
+      </div>
+      <div class="feat-card">
+        <span class="feat-icon">🆓</span>
+        <div class="feat-title" data-ru="Полностью бесплатно" data-en="Completely free">Полностью бесплатно</div>
+        <div class="feat-desc" data-ru="Без скрытых платежей, подписок и рекламы. Рабочий инструмент — бесплатно." data-en="No hidden fees, subscriptions or ads. A working tool — for free.">Без скрытых платежей, подписок и рекламы. Рабочий инструмент — бесплатно.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">RA<span>Z</span>E</div>
+  <div class="footer-links">
+    <a href="#how" class="footer-link" data-ru="Как работает" data-en="How it works">Как работает</a>
+    <a href="#" class="footer-link" data-ru="Платформы" data-en="Platforms">Платформы</a>
+    <a href="https://t.me/RAZECRYSTAL" target="_blank" class="footer-link">Telegram</a>
+  </div>
+  <a href="https://t.me/RAZECRYSTAL" target="_blank" class="footer-tg">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785l3.019-14.228c.309-1.239-.473-1.8-1.282-1.434z"/></svg>
+    <span data-ru="Канал разработчика" data-en="Developer channel">Канал разработчика</span>
+  </a>
+  <div class="footer-copy">
+    © 2025 RAZE — <span data-ru="Скачивай всё, что нравится" data-en="Download everything you like">Скачивай всё, что нравится</span> &nbsp;·&nbsp;
+    <span data-ru="Разработчик: " data-en="Developer: ">Разработчик: </span><a href="https://t.me/RAZECRYSTAL" target="_blank">@RAZECRYSTAL</a>
+  </div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title" data-ru="СКАЧАТЬ" data-en="DOWNLOAD">СКАЧАТЬ</div>
+    <div class="modal-url" id="modalUrl"></div>
+
+    <div class="format-choice">
+      <div class="format-opt selected" onclick="selectFormat(this,'video')">
+        <span class="fo-icon">🎬</span>
+        <div class="fo-label" data-ru="Видео" data-en="Video">Видео</div>
+        <div class="fo-sub">MP4 / WEBM</div>
+      </div>
+      <div class="format-opt" onclick="selectFormat(this,'audio')">
+        <span class="fo-icon">🎵</span>
+        <div class="fo-label" data-ru="Аудио" data-en="Audio">Аудио</div>
+        <div class="fo-sub">MP3 / FLAC</div>
+      </div>
+    </div>
+
+    <select class="quality-select" id="qualitySelect">
+      <option value="best" data-ru="Лучшее качество (авто)" data-en="Best quality (auto)">Лучшее качество (авто)</option>
+      <option value="2160">4K — 2160p</option>
+      <option value="1080">Full HD — 1080p</option>
+      <option value="720">HD — 720p</option>
+      <option value="480">480p</option>
+      <option value="360">360p</option>
+    </select>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel" data-ru="Обрабатываем..." data-en="Processing...">Обрабатываем...</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()" data-ru="Отмена" data-en="Cancel">Отмена</button>
+      <button class="btn-dl" onclick="startDownload()" data-ru="СКАЧАТЬ" data-en="DOWNLOAD">СКАЧАТЬ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Cursor
+  const cur = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx=0, my=0, rx=0, ry=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; cur.style.left=mx+'px'; cur.style.top=my+'px'; });
+  (function animate(){ rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(animate); })();
+
+  // ── Lang
+  let currentLang = 'ru';
+  function setLang(lang) {
+    currentLang = lang;
+    document.documentElement.setAttribute('data-lang', lang);
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent===lang.toUpperCase()));
+    document.querySelectorAll('[data-ru]').forEach(el => {
+      const txt = el.getAttribute('data-'+lang);
+      if(txt) el.textContent = txt;
+    });
+    const inp = document.getElementById('urlInput');
+    inp.placeholder = inp.getAttribute('data-placeholder-'+lang);
+    // quality select
+    document.querySelectorAll('#qualitySelect option').forEach(o => {
+      const txt = o.getAttribute('data-'+lang);
+      if(txt) o.textContent = txt;
+    });
+  }
+
+  // ── Modal
+  let selectedFormat = 'video';
+  function openModal() {
+    const url = document.getElementById('urlInput').value.trim();
+    if(!url) {
+      document.getElementById('urlInput').focus();
+      document.querySelector('.dl-input-wrap').style.borderColor = 'var(--accent2)';
+      setTimeout(() => document.querySelector('.dl-input-wrap').style.borderColor = '', 1500);
+      return;
+    }
+    document.getElementById('modalUrl').textContent = url;
+    document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('progressWrap').classList.remove('show');
+    document.getElementById('progressFill').style.width = '0';
+  }
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+  function closeModalOutside(e) { if(e.target.id==='modalOverlay') closeModal(); }
+  function selectFormat(el, fmt) {
+    selectedFormat = fmt;
+    document.querySelectorAll('.format-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    const sel = document.getElementById('qualitySelect');
+    if(fmt === 'audio') {
+      sel.innerHTML = `
+        <option value="best" ${currentLang==='ru'?'data-ru="Лучшее качество (авто)"':'data-en="Best quality (auto)"'}>${currentLang==='ru'?'Лучшее качество (авто)':'Best quality (auto)'}</option>
+        <option value="mp3_320">MP3 — 320 kbps</option>
+        <option value="mp3_256">MP3 — 256 kbps</option>
+        <option value="mp3_128">MP3 — 128 kbps</option>
+        <option value="flac">FLAC (${currentLang==='ru'?'без потерь':'lossless'})</option>
+        <option value="aac">AAC</option>`;
+    } else {
+      sel.innerHTML = `
+        <option value="best">${currentLang==='ru'?'Лучшее качество (авто)':'Best quality (auto)'}</option>
+        <option value="2160">4K — 2160p</option>
+        <option value="1080">Full HD — 1080p</option>
+        <option value="720">HD — 720p</option>
+        <option value="480">480p</option>
+        <option value="360">360p</option>`;
+    }
+  }
+
+  function startDownload() {
+    const url = document.getElementById('modalUrl').textContent;
+    const quality = document.getElementById('qualitySelect').value;
+    const pw = document.getElementById('progressWrap');
+    const pf = document.getElementById('progressFill');
+    const pl = document.getElementById('progressLabel');
+    pw.classList.add('show');
+    document.querySelector('.btn-dl').disabled = true;
+
+    // Simulate progress (real download via backend API)
+    let p = 0;
+    const iv = setInterval(() => {
+      p += Math.random() * 12;
+      if(p > 90) p = 90;
+      pf.style.width = p + '%';
+      pl.textContent = currentLang==='ru' ? `Обрабатываем... ${Math.round(p)}%` : `Processing... ${Math.round(p)}%`;
+    }, 350);
+
+    // Real API call
+    fetch('/api/download', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url, format: selectedFormat, quality })
+    })
+    .then(r => {
+      clearInterval(iv);
+      pf.style.width = '100%';
+      if(r.ok) return r.blob().then(blob => {
+        pl.textContent = currentLang==='ru' ? '✓ Готово!' : '✓ Done!';
+        const ext = selectedFormat==='audio' ? (quality==='flac'?'flac':'mp3') : 'mp4';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `raze_download.${ext}`;
+        a.click();
+        setTimeout(closeModal, 1200);
+      });
+      else {
+        r.json().then(d => {
+          pl.textContent = '⚠ ' + (d.error || (currentLang==='ru'?'Ошибка. Попробуй ещё раз.':'Error. Try again.'));
+        });
+      }
+    })
+    .catch(() => {
+      clearInterval(iv);
+      pl.textContent = currentLang==='ru' ? '⚠ Сервер недоступен' : '⚠ Server unavailable';
+    })
+    .finally(() => { document.querySelector('.btn-dl').disabled = false; });
+  }
+
+  function handlePaste(e) {
+    setTimeout(() => {
+      const val = document.getElementById('urlInput').value;
+      if(val.startsWith('http')) openModal();
+    }, 50);
+  }
+
+  // ── Scroll animations
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting) { e.target.style.animation = 'fadeUp .7s ease both'; e.target.style.opacity = '1'; }
+    });
+  }, { threshold: .12 });
+  document.querySelectorAll('.step, .feat-card, .platform-pill').forEach(el => {
+    el.style.opacity = '0';
+    io.observe(el);
+  });
+</script>
+</body>
+</html>
